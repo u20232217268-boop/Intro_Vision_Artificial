@@ -1,0 +1,55 @@
+import cv2
+from ultralytics import YOLO
+
+# Cargar el modelo YOLOv8
+modelo = YOLO("yolov8n.pt")
+
+# Inicializar la cámara
+camara = cv2.VideoCapture(0)
+
+if not camara.isOpened():
+    print("No se pudo abrir la cámara.")
+    exit()
+
+while True:
+    ret, frame = camara.read()
+    if not ret:
+        print("No se pudo recibir el frame.")
+        break
+
+    # Inferir sobre el frame actual
+    resultados = modelo(frame, conf=0.45, verbose=False, classes=[67])
+
+    celulares = 0
+
+    # Filtrar las cajas detectadas por el nombre 'cell phone'
+    for caja in resultados[0].boxes:
+        clase_id = int(caja.cls[0])
+        nombre = modelo.names[clase_id]
+        if nombre == "cell phone":
+            celulares += 1
+
+    # Renderizar las cajas delimitadoras
+    frame_anotado = resultados[0].plot()
+
+    # Imprimir el texto con el total de celulares
+    cv2.putText(
+        frame_anotado,
+        f"Celulares detectados: {celulares}",
+        (20, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.9,
+        (255, 255, 0),
+        2
+    )
+
+    # Mostrar la imagen
+    cv2.imshow("Detector de celulares - Q para salir", frame_anotado)
+
+    # Presionar 'q' para finalizar
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+# Liberar cámara y cerrar ventanas
+camara.release()
+cv2.destroyAllWindows()
